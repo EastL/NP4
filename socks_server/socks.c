@@ -11,7 +11,7 @@
 
 int socks_request(int sfd)
 {
-	char buf[1024];
+	unsigned char buf[1024];
 	memset(buf, 0, 1024);
 	if (read(sfd, buf, 1024) < 0)
 		return SER_ERR;
