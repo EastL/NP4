@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include "socks.h"
 
-int socks_request(int sfd)
+int socks_request(int sfd, socks_t **socks)
 {
 	unsigned char buf[1024];
 	memset(buf, 0, 1024);
@@ -30,20 +30,62 @@ int socks_request(int sfd)
 	sprintf(IP, "%d.%d.%d.%d", buf[4], buf[5], buf[6], buf[7]);
 	strcpy(temp->ip, IP);
 
-	strcpy(temp->user_id, (char*)&buf[9]);
+	int uid_len = strlen((char*)&buf[8]);
+	strcpy(temp->user_id, (char*)&buf[8]);
+
 
 	printf("VN: %d, CD: %d, DST IP: %s, DST PORT: %d, USERID: %s\n", temp->vn, temp->cd, temp->ip, temp->port, temp->user_id);
+
+	if ((buf[4] == 0) && (buf[5] == 0) && (buf[6] == 0))
+	{
+		strcpy(temp->domain, (char*)&buf[9+uid_len]);
+		printf("domain name: %s\n", temp->domain);
+	}
+	
+	*socks = temp;
 	
 	return 0;
+}
+
+int firewall(int sfd, socks_t **socks)
+{
+	FILE *fd = fopen("socks.conf", "r");
+	char buf[1024];
+	int check = 1;
+
+
+	while(!feof(fd))
+	{
+		memset(buf, 0, 1024);
+		fgets(buf, 1024, fd);
+		
+		
+	}
+}
+
+void error_handler(int err)
+{
+	if (err == SER_ERR)
+	{
+		printf("server error!\n");
+		exit(0);
+	}
+
+	else
+		return;
 }
 
 int sub_deamon(int sfd)
 {
 	int err;
+	socks_t *socks;
 
-	//check owner and set public key
-	err = socks_request(sfd);
+	//accept socks request
+	err = socks_request(sfd, &socks);
 
+	error_handler(err);
+
+	err = firewall(sfd, &socks);
 
 	return 0;
 }
