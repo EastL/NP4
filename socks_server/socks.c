@@ -22,10 +22,17 @@ int socks_request(int sfd, socks_t **socks)
 	temp->vn = buf[0];
 	temp->cd = buf[1];
 	temp->port = buf[2] * 256 + buf[3];
-	
+
 	char IP[20];
 	memset(IP, 0, 20);
 
+	temp->cport[0] = buf[2];
+	temp->cport[1] = buf[3];
+	temp->cip[0] = buf[4];
+	temp->cip[1] = buf[5];
+	temp->cip[2] = buf[6];
+	temp->cip[3] = buf[7];
+	
 	sprintf(IP, "%d.%d.%d.%d", buf[4], buf[5], buf[6], buf[7]);
 	strcpy(temp->ip, IP);
 
@@ -44,6 +51,19 @@ int socks_request(int sfd, socks_t **socks)
 	*socks = temp;
 	
 	return 0;
+}
+
+void socks_reply(int sfd, unsigned char cd, socks_t *socks)
+{
+	char buf[128];
+	memset(buf, 0, 128);
+
+	char null = '\0';
+
+	sprintf(buf, "%c%c%c%c%c%c%c%c", null, cd, socks->cport[0],  socks->cport[1], socks->cip[0], socks->cip[1], socks->cip[2], socks->cip[3]);
+
+	for (int i = 0; i < 8; i++)
+		printf("%x\n", buf[i]);
 }
 
 int firewall(int sfd, socks_t **socks)
@@ -125,10 +145,12 @@ int sub_deamon(int sfd)
 			if (err < 0)
 			{
 				printf("connect error!\n");
-				return 0;
+				socks_reply(sfd, (unsigned char)FAILED, socks);
+				return -1;
 			}
 
 			printf("connect successful\n");
+			socks_reply(sfd, (unsigned char)GRANTED, socks);
 		}
 	}
 

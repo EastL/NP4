@@ -5,6 +5,8 @@
 #define AUTH_ERR -2
 #define CONNECT 1
 #define BIND 2
+#define GRANTED 90
+#define FAILED 91
 
 typedef struct
 {
@@ -14,6 +16,8 @@ typedef struct
 	char ip[20];
 	char user_id[20];
 	char domain[50];
+	char cport[2];
+	char cip[4];
 } socks_t;
 
 int sub_deamon(int sfd);
