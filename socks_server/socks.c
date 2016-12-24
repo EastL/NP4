@@ -5,9 +5,11 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include "socks.h"
+#include "util.h"
 
 int socks_request(int sfd, socks_t **socks)
 {
@@ -15,9 +17,6 @@ int socks_request(int sfd, socks_t **socks)
 	memset(buf, 0, 1024);
 	if (read(sfd, buf, 1024) < 0)
 		return SER_ERR;
-
-	for (int i = 0; i < 20; i++)
-		printf("%x\n", buf[i]);
 
 	socks_t *temp = malloc(sizeof(socks_t));
 	temp->vn = buf[0];
@@ -50,17 +49,36 @@ int socks_request(int sfd, socks_t **socks)
 int firewall(int sfd, socks_t **socks)
 {
 	FILE *fd = fopen("socks.conf", "r");
-	char buf[1024];
-	int check = 1;
+	int check = 0;
+	char buf[50];
+	int ip[4];
 
-
-	while(!feof(fd))
+	while(1)
 	{
-		memset(buf, 0, 1024);
-		fgets(buf, 1024, fd);
-		
-		
+		memset(buf, 0, 50);
+		fgets(buf, 50, fd);
+
+		if (strlen(buf) == 0)
+			break;
+
+		if (buf[0] == '*')
+		{
+			check = 1;
+			break;
+		}
+
+		buf[strlen(buf)-1] = '\0';
+
+		printf("%s\n", buf);
+		printf("%s\n", ((*socks)->ip));
+		check = regular_match((*socks)->ip, buf);
+		if (check == 1)
+			break;
 	}
+
+	fclose(fd);
+
+	return check;
 }
 
 void error_handler(int err)
@@ -77,7 +95,7 @@ void error_handler(int err)
 
 int sub_deamon(int sfd)
 {
-	int err;
+	int err, pass;
 	socks_t *socks;
 
 	//accept socks request
@@ -85,7 +103,34 @@ int sub_deamon(int sfd)
 
 	error_handler(err);
 
-	err = firewall(sfd, &socks);
+	if (firewall(sfd, &socks) == 1)
+	{
+		printf("pass firewall\n");
+		if (socks->cd == CONNECT)
+		{
+			//create client socket
+			int client_s = socket(AF_INET, SOCK_STREAM, 0);
+
+			//create server socket struct
+			struct sockaddr_in server;
+			memset(&server, 0, sizeof(server));
+
+			server.sin_addr.s_addr = inet_addr(socks->ip);
+			server.sin_family = AF_INET;
+			server.sin_port = htons(socks->port);
+
+			//connect to server
+			int err = 0;
+			err = connect(client_s, (struct sockaddr *)&server, sizeof(server));
+			if (err < 0)
+			{
+				printf("connect error!\n");
+				return 0;
+			}
+
+			printf("connect successful\n");
+		}
+	}
 
 	return 0;
 }

@@ -1,2 +1,2 @@
 all:
-	gcc server.c socks.c -o sockserver
+	gcc server.c socks.c util.c -o sockserver

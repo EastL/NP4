@@ -3,6 +3,8 @@
 
 #define SER_ERR -1
 #define AUTH_ERR -2
+#define CONNECT 1
+#define BIND 2
 
 typedef struct
 {

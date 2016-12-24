@@ -7,7 +7,7 @@ var options = {
         type: 4 // type is REQUIRED. Valid types: [4, 5]  (note 4 also works for 4a) 
     },
     target: {
-        host: "google.com", // can be an ip address or domain (4a and 5 only) 
+        host: "8.8.8.8", // can be an ip address or domain (4a and 5 only) 
         port: 80
     },
     command: 'connect'  // This defaults to connect, so it's optional if you're not using BIND or Associate. 
