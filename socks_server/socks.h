@@ -7,17 +7,18 @@
 #define BIND 2
 #define GRANTED 90
 #define FAILED 91
+#define MAXBUF 1000000
 
 typedef struct
 {
 	short vn;
 	short cd;
 	unsigned int port;
-	char ip[20];
-	char user_id[20];
-	char domain[50];
-	char cport[2];
-	char cip[4];
+	unsigned char ip[20];
+	unsigned char user_id[20];
+	unsigned char domain[50];
+	unsigned char cport[2];
+	unsigned char cip[4];
 } socks_t;
 
 int sub_deamon(int sfd);

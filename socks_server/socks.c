@@ -55,15 +55,63 @@ int socks_request(int sfd, socks_t **socks)
 
 void socks_reply(int sfd, unsigned char cd, socks_t *socks)
 {
-	char buf[128];
-	memset(buf, 0, 128);
+	char buf[8];
+	memset(buf, 0, 8);
 
 	char null = '\0';
 
 	sprintf(buf, "%c%c%c%c%c%c%c%c", null, cd, socks->cport[0],  socks->cport[1], socks->cip[0], socks->cip[1], socks->cip[2], socks->cip[3]);
 
-	for (int i = 0; i < 8; i++)
-		printf("%x\n", buf[i]);
+	write(sfd, buf, 8);
+}
+
+int proxy(int src, int dst)
+{
+	char buf[MAXBUF];
+	int src_close, dst_close;
+	int recv_len;
+	int len;
+	int nfds = getdtablesize();
+	fd_set rfds, afds;
+
+	FD_ZERO(&afds);
+	FD_SET(src, &afds);
+	FD_SET(dst, &afds);
+	
+	while (1)
+	{
+		memcpy(&rfds, &afds, sizeof(rfds));
+		if(select(nfds, &rfds, NULL, NULL, NULL) < 0)
+			return SER_ERR;
+
+		memset(buf, 0, MAXBUF);
+		if (FD_ISSET(src, &rfds))
+		{
+			recv_len = read(src, buf, MAXBUF);
+			if (recv_len > 0)
+				write(dst, buf, recv_len);
+
+			else if (recv_len == 0)
+				FD_CLR(src, &afds);
+
+			else
+				return SER_ERR;
+		}
+
+		memset(buf, 0, MAXBUF);
+		if (FD_ISSET(dst, &rfds))
+		{
+			recv_len = read(dst, buf, MAXBUF);
+			if (recv_len > 0)
+				write(src, buf, recv_len);
+
+			else if (recv_len == 0)
+				FD_CLR(dst, &afds);
+
+			else
+				return SER_ERR;
+		}
+	}
 }
 
 int firewall(int sfd, socks_t **socks)
@@ -151,6 +199,12 @@ int sub_deamon(int sfd)
 
 			printf("connect successful\n");
 			socks_reply(sfd, (unsigned char)GRANTED, socks);
+
+			proxy(sfd, client_s);
+			error_handler(err);
+
+			close(sfd);
+			close(client_s);
 		}
 	}
 
