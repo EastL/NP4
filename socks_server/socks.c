@@ -200,11 +200,61 @@ int sub_deamon(int sfd)
 			printf("connect successful\n");
 			socks_reply(sfd, (unsigned char)GRANTED, socks);
 
-			proxy(sfd, client_s);
+			err = proxy(sfd, client_s);
 			error_handler(err);
 
 			close(sfd);
 			close(client_s);
+		}
+
+		else if (socks->cd == BIND)
+		{
+			//bind a port
+			int bind_server = socket(AF_INET, SOCK_STREAM, 0);
+			
+			struct sockaddr_in server;
+			memset(&server, 0, sizeof(server));
+
+			server.sin_addr.s_addr = INADDR_ANY;
+			server.sin_family = AF_INET;
+			server.sin_port = htons(8763);
+
+			if (bind(bind_server, (struct sockaddr *)&server, sizeof(struct sockaddr_in)) < 0)
+			{
+				printf("bind error\n");
+				socks_reply(sfd, (unsigned char)FAILED, socks);
+				return -1;
+			}
+
+			if (listen(bind_server, 20) < 0)
+			{
+				printf("listen error\n");
+				socks_reply(sfd, (unsigned char)FAILED, socks);
+				return -1;
+			}
+
+			socks->cip[0] = '\0';
+			socks->cip[1] = '\0';
+			socks->cip[2] = '\0';
+			socks->cip[3] = '\0';
+
+			socks->cport[0] = 34;
+			socks->cport[1] = 59;
+
+			//set accept client socket
+			int clientfd;
+			struct sockaddr_in client_socket;
+			int cl_len = sizeof(client_socket);
+
+			socks_reply(sfd, (unsigned char)GRANTED, socks);
+			int client = accept(bind_server, (struct sockaddr *)&client_socket, &cl_len);
+			socks_reply(sfd, (unsigned char)GRANTED, socks);
+			
+			err = proxy(sfd, client);
+			error_handler(err);
+			
+			close(sfd);
+			close(client);
 		}
 	}
 
