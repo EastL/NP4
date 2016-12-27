@@ -89,7 +89,14 @@ int proxy(int src, int dst)
 		{
 			recv_len = read(src, buf, MAXBUF);
 			if (recv_len > 0)
-				write(dst, buf, recv_len);
+			{
+				int w_len;
+				w_len = write(dst, buf, recv_len);
+				if (w_len < recv_len)
+				{
+					printf("write not successful\n");
+				}
+			}
 
 			else if (recv_len == 0)
 				FD_CLR(src, &afds);
@@ -210,6 +217,7 @@ int sub_deamon(int sfd)
 		else if (socks->cd == BIND)
 		{
 			//bind a port
+			int port = 20000 + rand() % 1000;
 			int bind_server = socket(AF_INET, SOCK_STREAM, 0);
 			
 			struct sockaddr_in server;
@@ -217,14 +225,16 @@ int sub_deamon(int sfd)
 
 			server.sin_addr.s_addr = INADDR_ANY;
 			server.sin_family = AF_INET;
-			server.sin_port = htons(8763);
+			server.sin_port = htons(port);
 
-			if (bind(bind_server, (struct sockaddr *)&server, sizeof(struct sockaddr_in)) < 0)
+			while (bind(bind_server, (struct sockaddr *)&server, sizeof(server)) < 0)
 			{
-				printf("bind error\n");
-				socks_reply(sfd, (unsigned char)FAILED, socks);
-				return -1;
+				printf("bind error: %d\n", port);
+				port = 20000 + rand() % 1000;
+				server.sin_port = htons(port);
 			}
+
+			printf("bind successful : %d\n", port);
 
 			if (listen(bind_server, 20) < 0)
 			{
@@ -238,8 +248,8 @@ int sub_deamon(int sfd)
 			socks->cip[2] = '\0';
 			socks->cip[3] = '\0';
 
-			socks->cport[0] = 34;
-			socks->cport[1] = 59;
+			socks->cport[0] = port / 256;
+			socks->cport[1] = port % 256;
 
 			//set accept client socket
 			int clientfd;
