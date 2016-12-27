@@ -10,6 +10,9 @@ struct _host
 	int sock_fd;
 	int connected;
 	struct sockaddr_in server;
+	char sock_ip[30];
+	unsigned int sock_port;
+	int cd;
 };
 
 typedef struct _host host_t;

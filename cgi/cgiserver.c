@@ -11,6 +11,7 @@
 #include <errno.h>
 #include "util.h"
 #include "host.h"
+#include "socks.h"
 
 void html_head()
 {
@@ -36,7 +37,7 @@ void html_head()
 
 int main()
 {
-	//setenv("QUERY_STRING", "h1=127.0.0.1&p1=13420&f1=t1.txt&h2=&p2=&f2=&h3=&p3=&f3=&h4=&p4=&f4=&h5=&p5=&f5=", 1);
+	setenv("QUERY_STRING", "h1=127.0.0.1&p1=13420&f1=t1.txt&sh1=127.0.0.1&sp1=3421&h2=&p2=&f2=&sh2=&sp2=&h3=&p3=&f3=&sh3=&sp3=&h4=&p4=&f4=&sh4=&sp4=&h5=&p5=&f5=&sh5=&sp5=", 1);
 
 	char *query = getenv("QUERY_STRING");
 	char **s_array;
@@ -48,11 +49,6 @@ int main()
 	split(&s_array, query, "&", &counter);
 	//printf("%d\n", counter);
 	printf("arr1:%s\n", s_array[0]);
-	if (counter != 15)
-	{
-		printf("wrong input format!\n");
-		return 0;
-	}
 
 	host_t *host[6];
 
@@ -69,10 +65,12 @@ int main()
 		int index = i - 1;
 		if (strlen(s_array[index*3]) > 3 && strlen(s_array[index*3 + 1]) > 3 && strlen(s_array[index*3 + 2]) > 3)
 		{
-			strcpy(temp->ip, &s_array[index*3][3]);
-			temp->port = atoi(&s_array[index*3+1][3]);
-			strcpy(temp->file, &s_array[index*3+2][3]);
+			strcpy(temp->ip, &s_array[index*5][3]);
+			temp->port = atoi(&s_array[index*5+1][3]);
+			strcpy(temp->file, &s_array[index*5+2][3]);
 			temp->file_fd = fopen(temp->file, "r");
+			strcpy(temp->sock_ip, &s_array[index*5+3][4]);
+			temp->sock_port = atoi(&s_array[index*5+4][4]);
 			temp->connected = 0;
 			host[i] = temp;
 			nhost++;
@@ -93,29 +91,39 @@ int main()
 	{
 		if (host[i] != NULL)
 		{
+			//connect to sock server
 			int s = socket(AF_INET , SOCK_STREAM , 0);
 			struct sockaddr_in server;
 
 			memset(&server, 0, sizeof(server));
-			server.sin_addr.s_addr = inet_addr(host[i]->ip);
+			server.sin_addr.s_addr = inet_addr(host[i]->sock_ip);
 			server.sin_family = AF_INET;
-			server.sin_port = htons(host[i]->port);
-			int flag = fcntl(s, F_GETFL, 0);
-			fcntl(s, F_SETFL, flag | O_NONBLOCK);
+			server.sin_port = htons(host[i]->sock_port);
 
 			if (connect(s, (struct sockaddr *)&server , sizeof(server)) < 0)
 			{
-				if (errno != EINPROGRESS)
-				{
-					printf("Errno : %d\n", errno);
-					printf("<h2>connect error.</h2>\n");
-					fflush(stdout);
-					return -1;
-				}
+				printf("<h2>connect sock server error.</h2>\n");
+				return -1;
 			}
-	
-			else
+			
+			//make up packet
+			char *send_buf;
+			send_buf = make_up_packet(host[i]);
+
+			for (int J = 0; J < 9; J++)
+				printf("%x\n", send_buf[J]);
+			
+			//send socks
+			write(s, send_buf, 9);
+
+			//recv socks
+			get_socks(s, host[i]);
+
+			if (host[i]->cd == 90)
 				host[i]->connected = 1;
+
+			int flag = fcntl(s, F_GETFL, 0);
+			fcntl(s, F_SETFL, flag | O_NONBLOCK);
 
 			//set to host
 			host[i]->sock_fd = s;
@@ -165,6 +173,21 @@ int main()
 	printf("</table>\n");
 	fflush(stdout);
 
+	i = 0;
+	for (; i < 6; i++)
+	{
+		if (host[i] != NULL)
+		{
+			printf("%s\n", host[i]->ip);
+			printf("%d\n", host[i]->port);
+			printf("%s\n", host[i]->file);
+			printf("%d\n", host[i]->sock_fd);
+			printf("%s\n", host[i]->sock_ip);
+			printf("%d\n", host[i]->sock_port);
+		}
+	}
+
+/*
 	int complete = 0;
 	while (1)
 	{
@@ -237,21 +260,8 @@ int main()
 		if (complete == nhost)
 			break;
 	}
-	
+*/	
 
 	
-	/*
-	i = 0;
-	for (; i < 6; i++)
-	{
-		if (host[i] != NULL)
-		{
-			printf("%s\n", host[i]->ip);
-			printf("%d\n", host[i]->port);
-			printf("%s\n", host[i]->file);
-			printf("%d\n", host[i]->sock_fd);
-		}
-	}
-	*/
 	return 0;
 }
