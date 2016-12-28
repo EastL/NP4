@@ -37,18 +37,18 @@ void html_head()
 
 int main()
 {
-	setenv("QUERY_STRING", "h1=127.0.0.1&p1=13420&f1=t1.txt&sh1=127.0.0.1&sp1=3421&h2=&p2=&f2=&sh2=&sp2=&h3=&p3=&f3=&sh3=&sp3=&h4=&p4=&f4=&sh4=&sp4=&h5=&p5=&f5=&sh5=&sp5=", 1);
+	//setenv("QUERY_STRING", "h1=127.0.0.1&p1=13420&f1=t1.txt&sh1=127.0.0.1&sp1=3421&h2=&p2=&f2=&sh2=&sp2=&h3=&p3=&f3=&sh3=&sp3=&h4=&p4=&f4=&sh4=&sp4=&h5=&p5=&f5=&sh5=&sp5=", 1);
 
 	char *query = getenv("QUERY_STRING");
 	char **s_array;
 	size_t counter;
 	int nhost = 0;
 	
-	printf("q:%s\n", query);
+	//printf("q:%s\n", query);
 	chdir("/u/other/2017_1/104522052/public_html");
 	split(&s_array, query, "&", &counter);
 	//printf("%d\n", counter);
-	printf("arr1:%s\n", s_array[0]);
+	//printf("arr1:%s\n", s_array[0]);
 
 	host_t *host[6];
 
@@ -173,6 +173,7 @@ int main()
 	printf("</table>\n");
 	fflush(stdout);
 
+/*
 	i = 0;
 	for (; i < 6; i++)
 	{
@@ -186,8 +187,8 @@ int main()
 			printf("%d\n", host[i]->sock_port);
 		}
 	}
+*/
 
-/*
 	int complete = 0;
 	while (1)
 	{
@@ -260,7 +261,6 @@ int main()
 		if (complete == nhost)
 			break;
 	}
-*/	
 
 	
 	return 0;
